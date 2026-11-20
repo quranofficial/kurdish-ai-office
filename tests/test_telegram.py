@@ -36,3 +36,23 @@ def test_help_command_includes_dashboard_only_when_https_url_is_configured():
 
 def test_unknown_command_is_passed_to_ai():
     assert telegram_command_response("/unknown", "") is None
+
+
+def test_projects_command_explains_current_setup_status():
+    reply = telegram_command_response("/projects", "")
+    assert reply is not None
+    assert "Supabase" in reply
+
+
+def test_report_command_is_transparent_about_unfinished_modules():
+    reply = telegram_command_response("/report", "")
+    assert reply is not None
+    assert "١٦ ئەجێنت" in reply
+    assert "چالاک نەکراون" in reply
+
+
+def test_help_lists_projects_and_report_commands():
+    reply = telegram_command_response("/help", "")
+    assert reply is not None
+    assert "/projects" in reply
+    assert "/report" in reply
