@@ -4,51 +4,57 @@ Shared backend foundation for the Kurdish AI Office web dashboard and Telegram b
 
 ## Current phase
 
-- 16-agent registry with specialist departments and capabilities.
-- Deterministic task routing to a specialist (or the AI Manager for triage).
-- Protected task-submission endpoint.
-- Human-approval gate for sensitive actions such as publishing, payments, sending messages, and deletion.
-- Supabase schema for agents, tasks, and activity logs.
+- 16-agent registry with specialist departments and Sorani-aware deterministic routing.
+- Protected task-submission endpoint backed by Supabase.
+- Human-approval gate for sensitive task requests.
+- AI response endpoint using the OpenAI Responses API.
+- Per-agent role instructions, same-language responses, and no external tools or side effects.
 - GitHub Actions CI with unit tests.
 
-**Important:** agents are registered and task routing is implemented, but LLM-powered task execution, the web dashboard, and Telegram bot are not implemented yet. Tasks are queued; no external action is executed by this starter.
+**Current limitation:** the AI endpoint generates text responses only. It does not yet claim, persist, or execute queued Supabase tasks. Dashboard and Telegram integration are still upcoming.
 
 ## Stack
 
 - Python 3.12 + FastAPI
+- OpenAI Responses API
 - Supabase PostgreSQL
 - GitHub Actions
 
 ## Local setup
 
-1. Copy `.env.example` to `.env` and fill in the server-side values.
+1. Copy `.env.example` to `.env` and fill in server-side values.
 2. Create a Python virtual environment.
 3. Install dependencies: `pip install -r requirements.txt`
 4. Run: `uvicorn app.main:app --reload`
 5. Open `http://127.0.0.1:8000/docs`
 
-The API starts without database credentials. The public agent catalog remains available; task creation stays locked until both `OFFICE_API_KEY` and Supabase credentials are configured.
+The API starts without external credentials. The public agent catalog remains available. AI responses require `OPENAI_API_KEY` and `OFFICE_API_KEY`. Task creation additionally requires Supabase credentials and the schema migration.
 
 ## API
 
 - `GET /health` — service/configuration status (does not expose secrets).
 - `GET /api/v1/agents` — list the 16 registered agents.
-- `POST /api/v1/tasks` — create a queued task. Requires `Authorization: Bearer <OFFICE_API_KEY>`.
+- `POST /api/v1/assistant/respond` — generate an AI response with a selected or automatically routed agent.
+- `POST /api/v1/tasks` — create a queued task in Supabase.
 
-Example request:
+All write/AI endpoints require `Authorization: Bearer <OFFICE_API_KEY>`.
+
+Example AI request:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/tasks \
+curl -X POST http://127.0.0.1:8000/api/v1/assistant/respond \
   -H "Authorization: Bearer $OFFICE_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Translate this announcement into Kurdish","description":"Keep the tone formal."}'
+  -d '{"message":"تکایە ئەم دەقە وەرگێڕە بۆ ئینگلیزی"}'
 ```
+
+To select an agent explicitly, include `"agent_key":"translator"`. Valid keys are returned by `GET /api/v1/agents`.
 
 ## Supabase setup
 
 Run `supabase/migrations/0001_initial_schema.sql` in the Supabase SQL Editor. This creates the core tables and seeds the 16 agent records. Row Level Security is enabled; only the server-side `service_role` receives table grants in this starter.
 
-If the project uses Supabase Data API and the tables are not reachable through PostgREST, check the project's Data API exposed-schema settings. Do not solve this by exposing the service-role key to a browser.
+If the project uses Supabase Data API and the tables are not reachable through PostgREST, check the project's Data API exposed-schema settings. Do not expose the service-role key to a browser.
 
 ## Required secrets
 
@@ -57,14 +63,16 @@ Set these only in the server environment or deployment secrets:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `OFFICE_API_KEY` (use a long random value)
-- `OPENAI_API_KEY` (needed in a later phase for AI execution)
-- `TELEGRAM_BOT_TOKEN` (needed in a later phase for Telegram)
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` (defaults to `gpt-6.2-sol`)
+- `TELEGRAM_BOT_TOKEN` (for the later Telegram phase)
 
 Never commit `.env` or put service-role/API keys in frontend code.
 
 ## Safety model
 
-- The task endpoint is locked when `OFFICE_API_KEY` is absent.
-- The service-role key is used only by the backend.
-- Sensitive actions are marked `waiting_approval`; this phase does not execute them.
+- AI and task endpoints remain locked when `OFFICE_API_KEY` is absent.
+- OpenAI and Supabase keys are server-side only.
+- The AI response service has no tools and cannot perform external actions.
+- Sensitive task requests remain `waiting_approval`; this phase does not execute them.
 - Do not enable browser access to office tables until an explicit authenticated-user ownership model and matching RLS policies exist.
