@@ -58,7 +58,9 @@ def telegram_command_response(message: str, public_app_url: str) -> str | None:
             "/start - دەستپێکردن\n"
             "/help - ڕێنمایی\n"
             "/agents - بینینی ١٦ ئەجێنت\n"
-            "/office - زانیاری ئۆفیس و داشبۆرد"
+            "/office - زانیاری ئۆفیس و داشبۆرد\n"
+            "/projects - دۆخی پرۆژەکان\n"
+            "/report - ڕاپۆرتی ئۆفیس"
             f"{dashboard}\n\n"
             "هەروەها دەتوانیت ڕاستەوخۆ پرسیارەکەت بە کوردی بنووسیت."
         )
@@ -67,6 +69,19 @@ def telegram_command_response(message: str, public_app_url: str) -> str | None:
         return "ئەجێنتەکانی ئۆفیس:\n" + "\n".join(
             f"{index}. {agent['name']} — {agent['department']}"
             for index, agent in enumerate(agents, start=1)
+        )
+    if command == "/projects":
+        return (
+            "بەشی پرۆژەکان لە داشبۆرددا دیزاین کراوە، بەڵام پەیوەندی داتابەیس و بەڕێوەبردنی پرۆژەکان هێشتا چالاک نەکراون. "
+            "دوای ڕێکخستنی Supabase، دەتوانین لیست و دۆخی پرۆژەکان لێرە پیشان بدەین."
+        )
+    if command == "/report":
+        return (
+            "ڕاپۆرتی ئۆفیس:\n"
+            "• ١٦ ئەجێنت لە کاتەلۆگی سیستەمدا ئامادەن.\n"
+            "• وەڵامدانی AI لە بنەڕەتدا ئامادەیە.\n"
+            "• تۆمارکردنی ئەرک و ڕاپۆرتی داتابەیس هێشتا چالاک نەکراون.\n"
+            "• هیچ کردارێکی دەرەکی یان ئۆتۆماتیکی بەبێ پەسەندی مرۆڤ ئەنجام نادرێت."
         )
     if command == "/task":
         return (
