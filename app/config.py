@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     app_name: str = "Kurdish AI Office"
     environment: str = "development"
@@ -13,6 +14,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-6.2-sol"
     telegram_bot_token: str = ""
+    telegram_webhook_secret: str = ""
     office_admin_telegram_ids: str = ""
     office_api_key: str = ""
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -20,6 +22,7 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [x.strip() for x in self.cors_origins.split(",") if x.strip()]
+
 
 @lru_cache
 def get_settings() -> Settings:
