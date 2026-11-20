@@ -10,7 +10,7 @@ A Sorani-first AI Office with a web dashboard, 16 specialist agents, and a Teleg
 - AI chat endpoint using the OpenAI Responses API.
 - Telegram webhook endpoint with Telegram's secret-token header validation.
 - Office-key-protected endpoint to register the Telegram webhook from the deployed service.
-- Task creation endpoint with a human-approval state for sensitive requests.
+- Task creation and listing endpoints, plus an approval-only transition for sensitive requests.
 - GitHub Actions tests.
 
 **Important limits:** AI replies are generated text, not autonomous external actions. The assistant cannot send emails, publish posts, edit external files, or make payments. Task records require the Supabase migration and credentials. Telegram needs a bot token, webhook secret, and deployed HTTPS URL.
@@ -39,6 +39,7 @@ Set secrets only in the server/deployment environment. Never commit real values.
 - `OPENAI_API_KEY` — required for AI replies.
 - `OPENAI_MODEL` — defaults to `gpt-6.2-sol`.
 - `OFFICE_API_KEY` — protects dashboard AI/task endpoints and webhook registration; use a long random value.
+- `OFFICE_ADMIN_TELEGRAM_IDS` — comma-separated Telegram numeric user IDs allowed to list and approve tasks in the bot.
 - `TELEGRAM_BOT_TOKEN` — required for Telegram.
 - `TELEGRAM_WEBHOOK_SECRET` — random secret used to authenticate Telegram webhook requests.
 - `PUBLIC_APP_URL` — deployed HTTPS base URL, e.g. your Vercel production URL.
@@ -50,7 +51,8 @@ Set secrets only in the server/deployment environment. Never commit real values.
 2. Generate a strong webhook secret using letters, numbers, underscores, and hyphens; set it as `TELEGRAM_WEBHOOK_SECRET`.
 3. Set `PUBLIC_APP_URL` to the deployed HTTPS Vercel URL.
 4. After deployment, call `POST /api/v1/telegram/register` with `Authorization: Bearer <OFFICE_API_KEY>`. The server registers its own webhook with Telegram using the server-side token. Alternatively, run `python scripts/set_telegram_webhook.py` in a trusted local environment with the same variables.
-5. Send a message to the bot. It routes the message to a specialist agent and replies.
+5. Set `OFFICE_ADMIN_TELEGRAM_IDS` to the comma-separated numeric Telegram user IDs of trusted office administrators before enabling task-management commands.
+6. Send a message to the bot. It routes the message to a specialist agent and replies. `/tasks` and `/approve ID` are restricted to configured administrators.
 
 The webhook endpoint validates Telegram's `X-Telegram-Bot-Api-Secret-Token` header. Do not expose the bot token or webhook secret in browser code or GitHub.
 
@@ -60,7 +62,9 @@ The webhook endpoint validates Telegram's `X-Telegram-Bot-Api-Secret-Token` head
 - `GET /health` — service/configuration status; no secret values are returned.
 - `GET /api/v1/agents` — public catalog of 16 agents.
 - `POST /api/v1/assistant/respond` — AI response; requires `Authorization: Bearer <OFFICE_API_KEY>`.
-- `POST /api/v1/tasks` — creates a queued Supabase task; requires the same office key and database setup.
+- `POST /api/v1/tasks` — creates a queued or approval-waiting task; requires the office key and database setup.
+- `GET /api/v1/tasks?status=waiting_approval&limit=30` — lists tasks; requires the office key.
+- `POST /api/v1/tasks/{task_id}/approve` — approves a pending task and moves it to the queue; requires the office key. Approval does not execute the task.
 - `POST /api/v1/telegram/register` — registers the Telegram webhook; requires the office key.
 - `POST /api/v1/telegram/webhook` — receives Telegram updates; requires the configured Telegram secret-token header.
 
