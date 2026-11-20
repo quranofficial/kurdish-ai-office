@@ -24,6 +24,11 @@ class Settings(BaseSettings):
     def cors_origin_list(self) -> list[str]:
         return [x.strip() for x in self.cors_origins.split(",") if x.strip()]
 
+    @property
+    def office_admin_telegram_id_list(self) -> set[int]:
+        values = {item.strip() for item in self.office_admin_telegram_ids.split(",") if item.strip()}
+        return {int(item) for item in values if item.isdigit()}
+
 
 @lru_cache
 def get_settings() -> Settings:
