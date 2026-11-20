@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ckb" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101827"><title>Kurdish AI Office</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#121d2e;--panel2:#18263a;--line:#26364d;--muted:#9aabc1;--text:#edf4ff;--accent:#58c5ad;--blue:#75a7ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0,#18334a 0,transparent 42%),var(--bg);color:var(--text);font-family:Tahoma,Arial,sans-serif;min-height:100vh}
+header{padding:22px clamp(16px,4vw,48px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,#58c5ad,#3985c9);display:grid;place-items:center;color:#07151d;font-weight:bold;font-size:22px}
+h1{font-size:19px;margin:0}header p{margin:5px 0 0;color:var(--muted);font-size:12px}.status{font-size:12px;color:var(--accent);border:1px solid #28584f;border-radius:20px;padding:8px 12px}
+main{max-width:1180px;margin:28px auto;padding:0 18px;display:grid;grid-template-columns:300px 1fr;gap:20px}
+.panel{background:rgba(18,29,46,.94);border:1px solid var(--line);border-radius:18px;overflow:hidden}.panel-head{padding:17px 18px;border-bottom:1px solid var(--line);font-weight:bold}
+.agent-list{padding:10px;display:grid;gap:7px;max-height:66vh;overflow:auto}.agent{width:100%;text-align:right;border:1px solid transparent;background:transparent;color:var(--text);padding:11px;border-radius:11px;cursor:pointer;font:inherit}.agent:hover,.agent.active{background:var(--panel2);border-color:#34516a}.agent small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.chat{min-height:70vh;display:flex;flex-direction:column}.welcome{padding:30px 24px 14px}.welcome h2{margin:0 0 9px;font-size:23px}.welcome p{color:var(--muted);line-height:1.9;margin:0}
+.messages{padding:10px 22px 20px;display:flex;flex-direction:column;gap:12px;flex:1;min-height:260px}.bubble{max-width:88%;padding:13px 15px;border-radius:14px;line-height:1.9;white-space:pre-wrap;overflow-wrap:anywhere}.user{align-self:flex-start;background:#203d57}.assistant{align-self:flex-end;background:#1b3040;border:1px solid #2b4c59}.meta{font-size:11px;color:var(--accent);margin-bottom:4px}
+.composer{padding:16px;border-top:1px solid var(--line);display:grid;gap:10px}.row{display:flex;gap:9px}.composer textarea,.composer input{width:100%;background:#0c1726;border:1px solid var(--line);border-radius:11px;color:var(--text);padding:12px;font:inherit;outline:none}.composer textarea{resize:vertical;min-height:75px}.composer textarea:focus,.composer input:focus{border-color:var(--blue)}
+button.primary{border:0;border-radius:11px;background:var(--accent);color:#06201d;padding:0 22px;font-weight:bold;font:inherit;cursor:pointer}button:disabled{opacity:.5;cursor:wait}.keybox{padding:15px;border-top:1px solid var(--line);display:grid;gap:8px}.keybox label{font-size:12px;color:var(--muted)}.keybox input{width:100%;background:#0c1726;border:1px solid var(--line);border-radius:9px;color:var(--text);padding:10px;direction:ltr}
+.note{font-size:11px;color:var(--muted);line-height:1.7}.error{color:#ff9a9a;font-size:12px}
+@media(max-width:760px){main{grid-template-columns:1fr;margin:15px auto}.agent-list{display:flex;overflow:auto;max-height:none}.agent{min-width:150px}.chat{min-height:65vh}header{align-items:flex-start}.status{white-space:nowrap}}
+</style></head>
+<body>
+<header><div class="brand"><div class="logo">AI</div><div><h1>Kurdish AI Office</h1><p>Professional Edition · ئۆفیسی زیرەکی دەستکرد</p></div></div><div class="status">● سیستەم ئامادەیە</div></header>
+<main>
+<section class="panel"><div class="panel-head">👥 کارمەندە زیرەکەکان</div><div id="agents" class="agent-list"><div class="note">بارکردنی کارمەندەکان...</div></div>
+<div class="keybox"><label for="apiKey">کلیلی دەستگەیشتنی ئۆفیس (OFFICE_API_KEY)</label><input id="apiKey" type="password" autocomplete="off" placeholder="کلیلەکەت لێرە دابنێ"><div class="note">کلیلەکە تەنها لە یادگەی ئەم پەڕەیەدا دەمێنێتەوە و لەسەر سێرڤەر هەڵناگیرێت.</div></div></section>
+<section class="panel chat"><div class="welcome"><h2>بەخێربێیت بۆ ئۆفیسی زیرەک</h2><p>پرسیار یان ئەرکەکەت بنووسە. سیستەم کارمەندی گونجاو هەڵدەبژێرێت و وەڵامت دەداتەوە. بۆ دەستپێکردن، کلیلی ئۆفیسەکەت لە لای چەپ دابنێ.</p></div>
+<div id="messages" class="messages"><div class="bubble assistant">سڵاو! من یاریدەدەری ئۆفیسی زیرەکم. چ دەتوانم بۆت بکەم؟</div></div>
+<div class="composer"><div class="row"><textarea id="message" placeholder="ئەرک یان پرسیارەکەت لێرە بنووسە..." aria-label="پەیام"></textarea><button id="send" class="primary">ناردن</button></div><div id="feedback" class="note">وەڵامەکان بە زمانی پەیامەکەت دەبن.</div></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);let selectedAgent=null;let agents=[];
+function addBubble(text,kind,name){const el=document.createElement('div');el.className='bubble '+kind;if(name){const m=document.createElement('div');m.className='meta';m.textContent=name;el.appendChild(m)}el.appendChild(document.createTextNode(text));$('messages').appendChild(el);$('messages').scrollTop=$('messages').scrollHeight;return el}
+async function loadAgents(){try{const r=await fetch('/api/v1/agents');if(!r.ok)throw Error('HTTP '+r.status);const d=await r.json();agents=d.agents||[];$('agents').replaceChildren();agents.forEach(a=>{const b=document.createElement('button');b.className='agent';b.innerHTML='<span></span><small></small>';b.querySelector('span').textContent=a.name;b.querySelector('small').textContent=a.department||a.description||a.key;b.onclick=()=>{selectedAgent=a.key;document.querySelectorAll('.agent').forEach(x=>x.classList.remove('active'));b.classList.add('active')};$('agents').appendChild(b)})}catch(e){$('agents').textContent='نەتوانرا لیستی کارمەندەکان باربکرێت.'}}
+async function send(){const msg=$('message').value.trim(),key=$('apiKey').value.trim();if(!msg)return;if(!key){$('feedback').textContent='تکایە کلیلی OFFICE_API_KEY دابنێ.';$('feedback').className='error';return}
+$('message').value='';addBubble(msg,'user');const btn=$('send');btn.disabled=true;$('feedback').textContent='کارمەندی زیرەک وەڵام ئامادە دەکات...';$('feedback').className='note';
+try{const r=await fetch('/api/v1/assistant/respond',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({message:msg,...(selectedAgent?{agent_key:selectedAgent}:{})})});const d=await r.json();if(!r.ok)throw Error(d.detail||'هەڵەیەک ڕوویدا');addBubble(d.content,'assistant',d.agent_name||'AI Office');$('feedback').textContent='وەڵام دروستکرا · '+(d.model||'AI');}
+catch(e){$('feedback').textContent='هەڵە: '+e.message;$('feedback').className='error';}
+finally{btn.disabled=false;$('message').focus()}}
+$('send').addEventListener('click',send);$('message').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});loadAgents();
+</script></body></html>
