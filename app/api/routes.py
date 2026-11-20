@@ -1,7 +1,8 @@
 import asyncio
 import hmac
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from telegram import Bot
 
 from app.agents.catalog import list_agents
@@ -9,7 +10,7 @@ from app.config import get_settings
 from app.schemas.assistant import AssistantRequest
 from app.schemas.tasks import TaskCreate
 from app.services.assistant import generate_assistant_reply
-from app.services.tasks import create_task
+from app.services.tasks import approve_task, create_task, list_tasks
 
 router = APIRouter(prefix="/api/v1")
 
@@ -60,7 +61,9 @@ def telegram_command_response(message: str, public_app_url: str) -> str | None:
             "/agents - بینینی ١٦ ئەجێنت\n"
             "/office - زانیاری ئۆفیس و داشبۆرد\n"
             "/projects - دۆخی پرۆژەکان\n"
-            "/report - ڕاپۆرتی ئۆفیس"
+            "/report - ڕاپۆرتی ئۆفیس\n"
+            "/tasks - لیستی ئەرکەکان\n"
+            "/approve ID - پەسەندکردنی ئەرک"
             f"{dashboard}\n\n"
             "هەروەها دەتوانیت ڕاستەوخۆ پرسیارەکەت بە کوردی بنووسیت."
         )
@@ -127,6 +130,33 @@ async def submit_task(payload: TaskCreate):
         raise HTTPException(status_code=500, detail=message) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Task persistence failed. Check the database connection and schema.") from exc
+
+
+@router.get("/tasks", tags=["tasks"], dependencies=[Depends(require_office_key)])
+async def get_tasks(
+    task_status: str | None = Query(default=None, alias="status"),
+    limit: int = Query(default=30, ge=1, le=100),
+):
+    try:
+        return {"tasks": list_tasks(status_filter=task_status, limit=limit)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Task listing failed. Check the database connection and schema.") from exc
+
+
+@router.post("/tasks/{task_id}/approve", tags=["tasks"], dependencies=[Depends(require_office_key)])
+async def approve_task_endpoint(task_id: UUID):
+    try:
+        return approve_task(str(task_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Task approval failed. Check the database connection and schema.") from exc
 
 
 @router.post("/telegram/register", tags=["telegram"], dependencies=[Depends(require_office_key)])
