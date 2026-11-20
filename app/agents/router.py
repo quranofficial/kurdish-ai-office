@@ -11,7 +11,7 @@ def route_task(title: str, description: str = "") -> AgentMatch:
     text = f"{title} {description}".casefold()
     scored: list[tuple[int, Agent]] = []
     for agent in AGENTS:
-        score = sum(2 if keyword in title.casefold() else 1 for keyword in agent.keywords if keyword in text)
+        score = sum((3 if agent.key == "translator" else 2) if keyword in title.casefold() else 1 for keyword in agent.keywords if keyword in text)
         scored.append((score, agent))
     score, agent = max(scored, key=lambda item: (item[0], item[1].key == "manager"))
     if score == 0:
