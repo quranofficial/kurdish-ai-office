@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     supabase_anon_key: str = ""
     supabase_service_role_key: str = ""
     openai_api_key: str = ""
-    openai_model: str = "gpt-6.1-sol"
+    openai_model: str = "gpt-6.2-sol"
     telegram_bot_token: str = ""
     office_admin_telegram_ids: str = ""
     office_api_key: str = ""
