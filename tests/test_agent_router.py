@@ -17,3 +17,9 @@ def test_unknown_task_routes_to_manager():
 def test_sensitive_action_requires_approval():
     assert requires_human_approval("Publish the announcement") is True
     assert requires_human_approval("Research competitor pricing") is False
+
+def test_sorani_translation_task_routes_to_translator():
+    assert route_task("وەرگێڕانی ئەم دەقە").agent.key == "translator"
+
+def test_sorani_research_task_routes_to_research():
+    assert route_task("توێژینەوە لەسەر ئەم بابەتە").agent.key == "research"
