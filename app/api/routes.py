@@ -1,6 +1,8 @@
+import asyncio
 import hmac
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+from telegram import Bot
 
 from app.agents.catalog import list_agents
 from app.config import get_settings
@@ -22,6 +24,23 @@ def require_office_key(authorization: str | None = Header(default=None)) -> None
     supplied = authorization.removeprefix("Bearer ").strip() if authorization else ""
     if not hmac.compare_digest(supplied, configured):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid office API key.")
+
+
+def split_telegram_message(text: str, limit: int = 4000) -> list[str]:
+    remaining = text.strip()
+    chunks: list[str] = []
+    while remaining:
+        if len(remaining) <= limit:
+            chunks.append(remaining)
+            break
+        cut = remaining.rfind("\n", 0, limit)
+        if cut < limit // 2:
+            cut = remaining.rfind(" ", 0, limit)
+        if cut < limit // 2:
+            cut = limit
+        chunks.append(remaining[:cut].strip())
+        remaining = remaining[cut:].strip()
+    return chunks or [""]
 
 
 @router.get("/agents", tags=["agents"])
@@ -58,3 +77,36 @@ async def submit_task(payload: TaskCreate):
         raise HTTPException(status_code=500, detail=message) from exc
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Task persistence failed. Check the database connection and schema.") from exc
+
+
+@router.post("/telegram/webhook", tags=["telegram"])
+async def telegram_webhook(
+    request: Request,
+    x_telegram_bot_api_secret_token: str | None = Header(default=None),
+):
+    settings = get_settings()
+    if not settings.telegram_bot_token or not settings.telegram_webhook_secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Telegram webhook is not configured.",
+        )
+    if not hmac.compare_digest(x_telegram_bot_api_secret_token or "", settings.telegram_webhook_secret):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Telegram webhook secret.")
+
+    update = await request.json()
+    message = update.get("message") or update.get("edited_message") or {}
+    text = (message.get("text") or "").strip()
+    chat = message.get("chat") or {}
+    chat_id = chat.get("id")
+    if not text or chat_id is None:
+        return {"ok": True, "ignored": True}
+
+    try:
+        reply = await asyncio.to_thread(generate_assistant_reply, AssistantRequest(message=text))
+        outgoing = f"{reply.agent_name}\n\n{reply.content}"
+        async with Bot(token=settings.telegram_bot_token) as bot:
+            for chunk in split_telegram_message(outgoing):
+                await bot.send_message(chat_id=chat_id, text=chunk)
+        return {"ok": True, "agent_key": reply.agent_key}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Telegram assistant reply failed. Check server logs.") from exc
