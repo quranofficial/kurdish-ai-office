@@ -92,3 +92,24 @@ on conflict (agent_key) do update set
 grant all on table public.office_agents to service_role;
 grant all on table public.office_tasks to service_role;
 grant all on table public.office_activity_logs to service_role;
+
+-- Keep updated_at accurate whenever an office record changes.
+create or replace function public.set_office_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+    new.updated_at = now();
+    return new;
+end;
+$$;
+
+drop trigger if exists office_agents_set_updated_at on public.office_agents;
+create trigger office_agents_set_updated_at
+before update on public.office_agents
+for each row execute function public.set_office_updated_at();
+
+drop trigger if exists office_tasks_set_updated_at on public.office_tasks;
+create trigger office_tasks_set_updated_at
+before update on public.office_tasks
+for each row execute function public.set_office_updated_at();
