@@ -104,7 +104,7 @@ async def agents():
 @router.post("/assistant/respond", tags=["assistant"], dependencies=[Depends(require_office_key)])
 async def assistant_respond(payload: AssistantRequest):
     try:
-        reply = generate_assistant_reply(payload)
+        reply = await asyncio.to_thread(generate_assistant_reply, payload)
         return {
             "agent_key": reply.agent_key,
             "agent_name": reply.agent_name,
@@ -193,10 +193,20 @@ async def telegram_webhook(
     if not hmac.compare_digest(x_telegram_bot_api_secret_token or "", settings.telegram_webhook_secret):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Telegram webhook secret.")
 
-    update = await request.json()
+    try:
+        update = await request.json()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid Telegram update JSON.") from exc
+    if not isinstance(update, dict):
+        raise HTTPException(status_code=400, detail="Telegram update must be a JSON object.")
+
     message = update.get("message") or update.get("edited_message") or {}
+    if not isinstance(message, dict):
+        return {"ok": True, "ignored": True}
     text = (message.get("text") or "").strip()
     chat = message.get("chat") or {}
+    if not isinstance(chat, dict):
+        return {"ok": True, "ignored": True}
     chat_id = chat.get("id")
     if not text or chat_id is None:
         return {"ok": True, "ignored": True}
