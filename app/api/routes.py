@@ -202,14 +202,43 @@ async def telegram_webhook(
         return {"ok": True, "ignored": True}
 
     try:
-        command_reply = telegram_command_response(text, settings.public_app_url)
-        if command_reply is not None:
-            outgoing = command_reply
-            agent_key = "command"
+        command = text.split(maxsplit=1)[0].split("@", maxsplit=1)[0].lower()
+        sender_id = (message.get("from") or {}).get("id")
+        if command in {"/tasks", "/approve"}:
+            if sender_id not in settings.office_admin_telegram_id_list:
+                outgoing = "ئەم فەرمانە تەنها بۆ بەڕێوەبەرانی ڕێگەپێدراوە."
+                agent_key = "authorization"
+            elif command == "/tasks":
+                pending = list_tasks(status_filter="waiting_approval", limit=10)
+                if not pending:
+                    outgoing = "هیچ ئەرکێک چاوەڕێی پەسەندکردن ناکات."
+                else:
+                    outgoing = "ئەرکە چاوەڕوانەکان بۆ پەسەندکردن:\n" + "\n".join(
+                        f"• {item['title']}\nID: {item['id']}"
+                        for item in pending
+                    )
+                agent_key = "tasks"
+            else:
+                parts = text.split(maxsplit=1)
+                if len(parts) != 2:
+                    outgoing = "بۆ پەسەندکردن: /approve TASK_ID"
+                    agent_key = "tasks"
+                else:
+                    try:
+                        approved = approve_task(str(UUID(parts[1].strip())))
+                        outgoing = f"ئەرک پەسەند کرا و خرایە ناو ڕیزەی جێبەجێکردن.\n{approved['title']}\nID: {approved['id']}"
+                    except (ValueError, TypeError):
+                        outgoing = "ناسنامەی ئەرک دروست نییە یان ئەرکەکە چاوەڕێی پەسەندکردن نییە."
+                    agent_key = "tasks"
         else:
-            reply = await asyncio.to_thread(generate_assistant_reply, AssistantRequest(message=text))
-            outgoing = f"{reply.agent_name}\n\n{reply.content}"
-            agent_key = reply.agent_key
+            command_reply = telegram_command_response(text, settings.public_app_url)
+            if command_reply is not None:
+                outgoing = command_reply
+                agent_key = "command"
+            else:
+                reply = await asyncio.to_thread(generate_assistant_reply, AssistantRequest(message=text))
+                outgoing = f"{reply.agent_name}\n\n{reply.content}"
+                agent_key = reply.agent_key
 
         async with Bot(token=settings.telegram_bot_token) as bot:
             for chunk in split_telegram_message(outgoing):
