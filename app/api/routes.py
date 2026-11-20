@@ -2,7 +2,6 @@ import asyncio
 import hmac
 from uuid import UUID
 
-from openai import APIConnectionError, APIStatusError, APITimeoutError
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from telegram import Bot
@@ -117,22 +116,12 @@ async def assistant_respond(payload: AssistantRequest):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except APIStatusError as exc:
-        error_code = getattr(exc, "code", None) or getattr(exc, "type", None) or "api_error"
-        raise HTTPException(
-            status_code=502,
-            detail=f"OpenAI API returned HTTP {exc.status_code} ({error_code}). Check OPENAI_MODEL, API key permissions, and API billing.",
-        ) from exc
-    except (APIConnectionError, APITimeoutError) as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="Could not connect to the OpenAI API. Check network access and try again.",
-        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Unexpected AI service error ({type(exc).__name__}). Check Vercel function logs.",
+            detail=f"Gemini API request failed ({type(exc).__name__}). Check GEMINI_API_KEY, GEMINI_MODEL, and Google AI Studio rate limits.",
         ) from exc
+
 
 
 @router.post("/tasks", tags=["tasks"], dependencies=[Depends(require_office_key)])
