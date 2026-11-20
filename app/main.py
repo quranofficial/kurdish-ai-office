@@ -38,6 +38,6 @@ async def health():
         "database_configured": bool(settings.supabase_url and settings.supabase_service_role_key),
         "ai_configured": bool(settings.openai_api_key),
         "ai_model": settings.openai_model if settings.openai_api_key else None,
-        "telegram_configured": bool(settings.telegram_bot_token),
+        "telegram_configured": bool(settings.telegram_bot_token and settings.telegram_webhook_secret),
         "task_api_unlocked": bool(settings.office_api_key),
     }
