@@ -79,6 +79,26 @@ async def submit_task(payload: TaskCreate):
         raise HTTPException(status_code=502, detail="Task persistence failed. Check the database connection and schema.") from exc
 
 
+@router.post("/telegram/register", tags=["telegram"], dependencies=[Depends(require_office_key)])
+async def register_telegram_webhook():
+    settings = get_settings()
+    if not settings.telegram_bot_token or not settings.telegram_webhook_secret:
+        raise HTTPException(status_code=503, detail="Set TELEGRAM_BOT_TOKEN and TELEGRAM_WEBHOOK_SECRET first.")
+    if not settings.public_app_url.startswith("https://"):
+        raise HTTPException(status_code=503, detail="Set PUBLIC_APP_URL to the deployed HTTPS URL first.")
+    try:
+        async with Bot(token=settings.telegram_bot_token) as bot:
+            ok = await bot.set_webhook(
+                url=f"{settings.public_app_url.rstrip('/')}/api/v1/telegram/webhook",
+                secret_token=settings.telegram_webhook_secret,
+                allowed_updates=["message"],
+                drop_pending_updates=False,
+            )
+        return {"ok": bool(ok), "webhook_url": f"{settings.public_app_url.rstrip('/')}/api/v1/telegram/webhook"}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Telegram webhook registration failed. Check server logs.") from exc
+
+
 @router.post("/telegram/webhook", tags=["telegram"])
 async def telegram_webhook(
     request: Request,
