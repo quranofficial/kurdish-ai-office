@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
 from app.agents.catalog import Agent, get_agent
 from app.agents.router import route_task
@@ -45,23 +46,24 @@ def resolve_agent(request: AssistantRequest) -> Agent:
 
 def generate_assistant_reply(request: AssistantRequest) -> AssistantReply:
     settings = get_settings()
-    if not settings.openai_api_key:
-        raise RuntimeError("AI is not configured. Set OPENAI_API_KEY on the server.")
+    if not settings.gemini_api_key:
+        raise RuntimeError("Gemini is not configured. Set GEMINI_API_KEY on the server.")
     agent = resolve_agent(request)
-    client = OpenAI(api_key=settings.openai_api_key, timeout=45.0, max_retries=2)
-    response = client.responses.create(
-        model=settings.openai_model,
-        instructions=build_agent_instructions(agent),
-        input=request.message,
-        max_output_tokens=1600,
-        store=False,
-    )
-    content = (response.output_text or "").strip()
+    with genai.Client(api_key=settings.gemini_api_key) as client:
+        response = client.models.generate_content(
+            model=settings.gemini_model,
+            contents=request.message,
+            config=types.GenerateContentConfig(
+                system_instruction=build_agent_instructions(agent),
+                max_output_tokens=1600,
+            ),
+        )
+    content = (response.text or "").strip()
     if not content:
-        raise RuntimeError("The AI provider returned an empty response.")
+        raise RuntimeError("Gemini returned an empty response.")
     return AssistantReply(
         agent_key=agent.key,
         agent_name=agent.name,
         content=content,
-        model=settings.openai_model,
+        model=settings.gemini_model,
     )
