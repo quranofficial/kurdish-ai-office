@@ -9,10 +9,11 @@ A Sorani-first AI Office with a web dashboard, 16 specialist agents, and a Teleg
 - Web dashboard served by FastAPI at `/`.
 - AI chat endpoint using the OpenAI Responses API.
 - Telegram webhook endpoint with Telegram's secret-token header validation.
+- Office-key-protected endpoint to register the Telegram webhook from the deployed service.
 - Task creation endpoint with a human-approval state for sensitive requests.
 - GitHub Actions tests.
 
-**Important limits:** AI replies are generated text, not autonomous external actions. The assistant cannot send emails, publish posts, edit external files, or make payments. Task records require the Supabase migration and credentials. The Telegram bot needs a bot token, webhook secret, a deployed HTTPS URL, and webhook registration.
+**Important limits:** AI replies are generated text, not autonomous external actions. The assistant cannot send emails, publish posts, edit external files, or make payments. Task records require the Supabase migration and credentials. Telegram needs a bot token, webhook secret, and deployed HTTPS URL.
 
 ## Stack
 
@@ -37,10 +38,10 @@ Set secrets only in the server/deployment environment. Never commit real values.
 
 - `OPENAI_API_KEY` — required for AI replies.
 - `OPENAI_MODEL` — defaults to `gpt-6.2-sol`.
-- `OFFICE_API_KEY` — protects dashboard AI/task endpoints; use a long random value.
+- `OFFICE_API_KEY` — protects dashboard AI/task endpoints and webhook registration; use a long random value.
 - `TELEGRAM_BOT_TOKEN` — required for Telegram.
 - `TELEGRAM_WEBHOOK_SECRET` — random secret used to authenticate Telegram webhook requests.
-- `PUBLIC_APP_URL` — deployed HTTPS base URL, used only by the webhook registration script.
+- `PUBLIC_APP_URL` — deployed HTTPS base URL, e.g. your Vercel production URL.
 - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` — required for persistent task records.
 
 ## Telegram setup
@@ -48,7 +49,7 @@ Set secrets only in the server/deployment environment. Never commit real values.
 1. Create a bot with Telegram's BotFather and set `TELEGRAM_BOT_TOKEN` in Vercel.
 2. Generate a strong webhook secret using letters, numbers, underscores, and hyphens; set it as `TELEGRAM_WEBHOOK_SECRET`.
 3. Set `PUBLIC_APP_URL` to the deployed HTTPS Vercel URL.
-4. With the same variables available locally, run `python scripts/set_telegram_webhook.py` once after deployment. It registers `/api/v1/telegram/webhook` with Telegram.
+4. After deployment, call `POST /api/v1/telegram/register` with `Authorization: Bearer <OFFICE_API_KEY>`. The server registers its own webhook with Telegram using the server-side token. Alternatively, run `python scripts/set_telegram_webhook.py` in a trusted local environment with the same variables.
 5. Send a message to the bot. It routes the message to a specialist agent and replies.
 
 The webhook endpoint validates Telegram's `X-Telegram-Bot-Api-Secret-Token` header. Do not expose the bot token or webhook secret in browser code or GitHub.
@@ -60,7 +61,8 @@ The webhook endpoint validates Telegram's `X-Telegram-Bot-Api-Secret-Token` head
 - `GET /api/v1/agents` — public catalog of 16 agents.
 - `POST /api/v1/assistant/respond` — AI response; requires `Authorization: Bearer <OFFICE_API_KEY>`.
 - `POST /api/v1/tasks` — creates a queued Supabase task; requires the same office key and database setup.
-- `POST /api/v1/telegram/webhook` — Telegram webhook; requires the configured Telegram secret-token header.
+- `POST /api/v1/telegram/register` — registers the Telegram webhook; requires the office key.
+- `POST /api/v1/telegram/webhook` — receives Telegram updates; requires the configured Telegram secret-token header.
 
 For the web AI chat, enter `OFFICE_API_KEY` in the dashboard's key field. The key is held in page memory only and is not stored by the app.
 
