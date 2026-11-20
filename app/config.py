@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     telegram_bot_token: str = ""
     office_admin_telegram_ids: str = ""
+    office_api_key: str = ""
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @property
