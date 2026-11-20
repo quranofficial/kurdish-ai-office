@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
     cors_origins: str = "http://localhost:3000"
+    public_app_url: str = ""
     supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_service_role_key: str = ""
