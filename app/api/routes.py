@@ -43,6 +43,41 @@ def split_telegram_message(text: str, limit: int = 4000) -> list[str]:
     return chunks or [""]
 
 
+def telegram_command_response(message: str, public_app_url: str) -> str | None:
+    command = message.split(maxsplit=1)[0].split("@", maxsplit=1)[0].lower()
+    if command == "/start":
+        return (
+            "بەخێربێیت بۆ Kurdish AI Office – Professional Edition!\n\n"
+            "من یاریدەدەری ئۆفیسی زیرەکم. دەتوانیت بە کوردی داواکارییەکانت بنووسیت.\n"
+            "بۆ بینینی فەرمانەکان /help بنووسە."
+        )
+    if command in {"/help", "/office"}:
+        dashboard = f"\nداشبۆرد: {public_app_url}" if public_app_url.startswith("https://") else ""
+        return (
+            "فەرمانە بەردەستەکان:\n"
+            "/start - دەستپێکردن\n"
+            "/help - ڕێنمایی\n"
+            "/agents - بینینی ١٦ ئەجێنت\n"
+            "/office - زانیاری ئۆفیس و داشبۆرد"
+            f"{dashboard}\n\n"
+            "هەروەها دەتوانیت ڕاستەوخۆ پرسیارەکەت بە کوردی بنووسیت."
+        )
+    if command == "/agents":
+        agents = list_agents()
+        return "ئەجێنتەکانی ئۆفیس:\n" + "\n".join(
+            f"{index}. {agent['name']} — {agent['department']}"
+            for index, agent in enumerate(agents, start=1)
+        )
+    if command == "/task":
+        return (
+            "بەشی تۆمارکردنی ئەرک هێشتا پێویستی بە ڕێکخستنی داتابەیس هەیە. "
+            "ئێستا دەتوانیت داواکارییەکەت وەک نامەی ئاسایی بنووسیت تا AI یارمەتیت بدات."
+        )
+    if command == "/stop":
+        return "هیچ ئەرکێکی خۆکاری چالاک نییە بۆ وەستاندن."
+    return None
+
+
 @router.get("/agents", tags=["agents"])
 async def agents():
     return {"count": len(list_agents()), "agents": list_agents()}
@@ -122,11 +157,18 @@ async def telegram_webhook(
         return {"ok": True, "ignored": True}
 
     try:
-        reply = await asyncio.to_thread(generate_assistant_reply, AssistantRequest(message=text))
-        outgoing = f"{reply.agent_name}\n\n{reply.content}"
+        command_reply = telegram_command_response(text, settings.public_app_url)
+        if command_reply is not None:
+            outgoing = command_reply
+            agent_key = "command"
+        else:
+            reply = await asyncio.to_thread(generate_assistant_reply, AssistantRequest(message=text))
+            outgoing = f"{reply.agent_name}\n\n{reply.content}"
+            agent_key = reply.agent_key
+
         async with Bot(token=settings.telegram_bot_token) as bot:
             for chunk in split_telegram_message(outgoing):
                 await bot.send_message(chat_id=chat_id, text=chunk)
-        return {"ok": True, "agent_key": reply.agent_key}
+        return {"ok": True, "agent_key": agent_key}
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Telegram assistant reply failed. Check server logs.") from exc
