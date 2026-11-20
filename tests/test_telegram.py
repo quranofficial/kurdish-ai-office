@@ -56,3 +56,5 @@ def test_help_lists_projects_and_report_commands():
     assert reply is not None
     assert "/projects" in reply
     assert "/report" in reply
+    assert "/tasks" in reply
+    assert "/approve ID" in reply
