@@ -20,6 +20,16 @@ Shared backend foundation for the Kurdish AI Office web dashboard and Telegram b
 - Supabase PostgreSQL
 - GitHub Actions
 
+## Deployment (Vercel)
+
+The FastAPI backend is configured for Vercel's native Python runtime:
+- Root `index.py` exports the ASGI application.
+- `.python-version` pins Python 3.12.
+- `vercel.json` excludes tests and documentation from the function bundle.
+- Connect this GitHub repository to a Vercel project, then add the server-side environment variables in Vercel Project Settings. Never place secrets in GitHub files or browser code.
+
+Vercel's Python runtime supports FastAPI. Function execution limits apply, so this deployment is intended for the HTTP API; long-running background workers will need a separate queue/worker design.
+
 ## Local setup
 
 1. Copy `.env.example` to `.env` and fill in server-side values.
