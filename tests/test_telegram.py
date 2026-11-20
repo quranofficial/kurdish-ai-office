@@ -1,4 +1,4 @@
-from app.api.routes import split_telegram_message
+from app.api.routes import split_telegram_message, telegram_command_response
 
 
 def test_telegram_message_is_not_split_when_under_limit():
@@ -11,3 +11,28 @@ def test_telegram_message_splits_at_safe_boundaries():
     assert len(chunks) > 1
     assert all(len(chunk) <= 1000 for chunk in chunks)
     assert "".join(chunks).replace(" ", "") == text.replace(" ", "")
+
+
+def test_start_command_returns_kurdish_welcome():
+    reply = telegram_command_response("/start", "")
+    assert reply is not None
+    assert "بەخێربێیت" in reply
+
+
+def test_agents_command_lists_all_sixteen_agents():
+    reply = telegram_command_response("/agents", "")
+    assert reply is not None
+    assert "AI CEO" in reply
+    assert "Automation Agent" in reply
+    assert len(reply.splitlines()) == 17
+
+
+def test_help_command_includes_dashboard_only_when_https_url_is_configured():
+    reply = telegram_command_response("/help", "https://office.example")
+    assert reply is not None
+    assert "https://office.example" in reply
+    assert "/agents" in reply
+
+
+def test_unknown_command_is_passed_to_ai():
+    assert telegram_command_response("/unknown", "") is None
