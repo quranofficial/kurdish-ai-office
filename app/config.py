@@ -12,9 +12,8 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_anon_key: str = ""
     supabase_service_role_key: str = ""
-    openai_api_key: str = ""
-    # Use a model ID listed in the current OpenAI API model/pricing documentation.
-    openai_model: str = "gpt-6.1-sol"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-3.8-flash"
     telegram_bot_token: str = ""
     telegram_webhook_secret: str = ""
     office_admin_telegram_ids: str = ""
